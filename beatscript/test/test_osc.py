@@ -27,34 +27,40 @@ import unittest
 
 Tone = namedtuple("Tone", ["theta", "delta", "omega", "val"])
 
-FREQ_800_HZ = Decimal(2 * math.pi / 800)  # Radians/ sec
+VEL_800_HZ = Decimal(800 * 2 * math.pi)  # Radians/ sec
 
-def osc(tone=None):
+def sinewave(tone=None):
     if tone is None:
         tone = yield None
+    yield tone
     while True:
+        pos = tone.theta + tone.delta * tone.omega
         tone = yield tone._replace(
-            val=math.sin(tone.theta + tone.delta * tone.omega)
+            theta=pos,
+            val=Decimal(math.sin(pos))
         )
 
 class OSCTests(unittest.TestCase):
 
     def test_init(self):
-        
-        expected = [math.sin(x) for x in range(0, 30)]
-
-        source = osc()
+        source = sinewave()
         source.send(None)
         zero = Decimal(0)
-        dt = Decimal("0.5")
+        dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
+
+        # 4 cycles at 16 samples per cycle
+        expected = [
+            Decimal(math.sin(x * 2 * math.pi / 16))
+            for x in range(0, 4 * 16)
+        ]
 
         for n, x in enumerate(expected):
             if n == 0:
-                output = source.send(Tone(zero, dt, FREQ_800_HZ, 0))
+                output = source.send(Tone(zero, dt, VEL_800_HZ, zero))
             else:
                 output = source.send(
-                    Tone(output.theta + dt, dt, FREQ_800_HZ, output.val)
+                    Tone(output.theta + dt, dt, VEL_800_HZ, output.val)
                 )
 
             with self.subTest(n=n):
-                self.assertEqual(x, output.val)
+                self.assertAlmostEqual(x, output.val, places=2)
