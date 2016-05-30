@@ -23,6 +23,7 @@ import bisect
 from collections import namedtuple
 from decimal import Decimal
 import math
+import warnings
 
 import unittest
 
@@ -51,12 +52,22 @@ def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
         tone = yield None
     yield tone
     while True:
-        val = Decimal.fma(tone.delta, tone.omega, tone.theta)
-        pos = val % Decimal(2 * math.pi)
+        theta = Decimal.fma(tone.delta, tone.omega, tone.theta)
+        pos = theta % Decimal(2 * math.pi)
         sector = bisect.bisect_left(features, pos)
+        if sector == 0:
+            val = Decimal.fma(tone.delta, 2 * nRise / nBins, tone.val)
+        elif sector == 1:
+            val = Decimal.fma(tone.delta, 2 * nRise / nBins, tone.val)
+        elif sector == 2:
+            val = Decimal.fma(tone.delta, 2 * nRise / nBins, tone.val)
+        elif sector == 3:
+            val = Decimal.fma(tone.delta, 2 * nRise / nBins, tone.val)
+        else:
+            warnings.warn("Bad trapezoid sector")
         tone = yield tone._replace(
-            theta=pos,
-            val=Decimal(1)
+            theta=theta,
+            val=val
         )
 
 class OSCTests(unittest.TestCase):
@@ -91,10 +102,10 @@ class OSCTests(unittest.TestCase):
         dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
 
         # 4 cycles at 16 samples per cycle
-        expected = [
-            Decimal(math.sin(x * 2 * math.pi / 16))
-            for x in range(0, 4 * 16)
-        ]
+        expected = (
+            Decimal(i) for i in [
+                0.2, 0.6, 1, 1, 1, 1, 0.6, 0.2, -0.2, -0.6, -1, -1, -1, -1, -0.6, -0.2
+            ] * 4)
 
         for n, x in enumerate(expected):
             if n == 0:
