@@ -45,24 +45,24 @@ def sinewave(tone=None):
 def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
     nBins = sum((nRise, nHigh, nFall, nLow))
     features = [
-        2 * math.pi * i / nBins
-        for i in (0, nRise, nRise + nHigh, nRise + nHigh + nFall, nBins)
+        Decimal(i / nBins)
+        for i in (0, nRise / 2, nRise / 2 + nHigh, nBins - nRise / 2 - nLow, nBins - nRise / 2)
     ]
     if tone is None:
         tone = yield None
     yield tone
     while True:
         theta = Decimal.fma(tone.delta, tone.omega, tone.theta)
-        pos = theta % Decimal(2 * math.pi)
+        pos = Decimal(theta % Decimal(2 * math.pi))
         sector = bisect.bisect_left(features, pos)
-        if sector == 0:
-            val = Decimal.fma(tone.delta, 2 * nRise / nBins, tone.val)
-        elif sector == 1:
-            val = Decimal.fma(tone.delta, 2 * nRise / nBins, tone.val)
+        if sector == 1:
+            val = pos / features[1]
         elif sector == 2:
-            val = Decimal.fma(tone.delta, 2 * nRise / nBins, tone.val)
+            val = Decimal(1)
         elif sector == 3:
-            val = Decimal.fma(tone.delta, 2 * nRise / nBins, tone.val)
+            val = Decimal.fma(tone.delta, Decimal(2 * nRise / nBins), tone.val)
+        elif sector == 4:
+            val = Decimal(-1)
         else:
             warnings.warn("Bad trapezoid sector")
         tone = yield tone._replace(
@@ -99,21 +99,23 @@ class OSCTests(unittest.TestCase):
         source = trapezoid(2, 2, 2, 2)
         source.send(None)
         zero = Decimal(0)
-        dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
+        p = Decimal(2 * math.pi) / VEL_800_HZ
+        dt = p / 16
 
         # 4 cycles at 16 samples per cycle
-        expected = (
-            Decimal(i) for i in [
+        expected = [
+            Decimal(i) for i in (
                 0.2, 0.6, 1, 1, 1, 1, 0.6, 0.2, -0.2, -0.6, -1, -1, -1, -1, -0.6, -0.2
-            ] * 4)
+            ) * 4]
 
         for n, x in enumerate(expected):
             if n == 0:
-                output = source.send(Tone(zero, dt, VEL_800_HZ, zero))
+                output = source.send(Tone(zero, dt, VEL_800_HZ, x))
             else:
                 output = source.send(
                     Tone(output.theta + dt, dt, VEL_800_HZ, output.val)
                 )
 
             with self.subTest(n=n):
+                print(x, output.val)
                 self.assertAlmostEqual(x, output.val, places=2)
