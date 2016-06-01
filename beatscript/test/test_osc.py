@@ -45,8 +45,10 @@ def sinewave(tone=None):
 def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
     nBins = sum((nRise, nHigh, nFall, nLow))
     features = [
-        Decimal(i / nBins)
-        for i in (0, nRise / 2, nRise / 2 + nHigh, nBins - nRise / 2 - nLow, nBins - nRise / 2)
+        Decimal(2 * math.pi * i / nBins)
+        for i in (
+            0, nRise / 2, nRise / 2 + nHigh, nBins - nRise / 2 - nLow, nBins - nRise / 2, nBins
+        )
     ]
     if tone is None:
         tone = yield None
@@ -55,16 +57,18 @@ def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
         theta = Decimal.fma(tone.delta, tone.omega, tone.theta)
         pos = Decimal(theta % Decimal(2 * math.pi))
         sector = bisect.bisect_left(features, pos)
+        print("pos: ", pos, "sector: ", sector, "t: ", pos  * nBins / Decimal(2 * math.pi))
         if sector == 1:
-            val = pos / features[1]
+            val = tone.val + 2 * pos / nRise
         elif sector == 2:
             val = Decimal(1)
         elif sector == 3:
-            val = Decimal.fma(tone.delta, Decimal(2 * nRise / nBins), tone.val)
+            val = tone.val - (pos - features[2]) / nFall
         elif sector == 4:
             val = Decimal(-1)
         else:
             warnings.warn("Bad trapezoid sector")
+            val = tone.val
         tone = yield tone._replace(
             theta=theta,
             val=val
