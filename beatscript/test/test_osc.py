@@ -52,14 +52,13 @@ def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
     ]
     if tone is None:
         tone = yield None
-    yield tone
     while True:
-        theta = Decimal.fma(tone.delta, tone.omega, tone.theta)
-        pos = Decimal(theta % Decimal(2 * math.pi))
+        pos = Decimal(tone.theta % Decimal(2 * math.pi))
         sector = bisect.bisect_left(features, pos)
-        print("pos: ", pos, "sector: ", sector, "t: ", pos  * nBins / Decimal(2 * math.pi))
         if sector == 1:
-            val = tone.val + 2 * pos / nRise
+            grad = 1 / features[1]
+            print("Grad: ", grad, Decimal(0.4) / grad)
+            val = tone.val + tone.delta * tone.omega * grad
         elif sector == 2:
             val = Decimal(1)
         elif sector == 3:
@@ -70,13 +69,12 @@ def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
             warnings.warn("Bad trapezoid sector")
             val = tone.val
         tone = yield tone._replace(
-            theta=theta,
             val=val
         )
 
 class OSCTests(unittest.TestCase):
 
-    def test_sine_800hz(self):
+    def tost_sine_800hz(self):
         source = sinewave()
         source.send(None)
         zero = Decimal(0)
@@ -93,7 +91,7 @@ class OSCTests(unittest.TestCase):
                 output = source.send(Tone(zero, dt, VEL_800_HZ, zero))
             else:
                 output = source.send(
-                    Tone(output.theta + dt, dt, VEL_800_HZ, output.val)
+                    Tone(output.theta + dt * VEL_800_HZ, dt, VEL_800_HZ, output.val)
                 )
 
             with self.subTest(n=n):
@@ -103,8 +101,7 @@ class OSCTests(unittest.TestCase):
         source = trapezoid(2, 2, 2, 2)
         source.send(None)
         zero = Decimal(0)
-        p = Decimal(2 * math.pi) / VEL_800_HZ
-        dt = p / 16
+        dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
 
         # 4 cycles at 16 samples per cycle
         expected = [
@@ -117,7 +114,7 @@ class OSCTests(unittest.TestCase):
                 output = source.send(Tone(zero, dt, VEL_800_HZ, x))
             else:
                 output = source.send(
-                    Tone(output.theta + dt, dt, VEL_800_HZ, output.val)
+                    Tone(output.theta + dt * VEL_800_HZ, dt, VEL_800_HZ, output.val)
                 )
 
             with self.subTest(n=n):
