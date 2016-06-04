@@ -37,30 +37,38 @@ def sinewave(tone=None):
     while True:
         tone = yield tone._replace(val=Decimal(math.sin(tone.theta)))
 
-def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
-    nBins = sum((nRise, nHigh, nFall, nLow))
-    features = [
-        Decimal(2 * math.pi * i / nBins)
-        for i in (
-            0, nRise / 2, nRise / 2 + nHigh, nBins - nRise / 2 - nLow, nBins - nRise / 2, nBins
-        )
-    ]
-    grad = 1 / features[1]
-    if tone is None:
-        tone = yield None
-    while True:
-        prev = tone.theta - tone.delta * tone.omega
-        pos = Decimal(prev % Decimal(2 * math.pi))
-        sector = bisect.bisect_left(features, pos)
-        if sector in (0, 1, 5, 6):
-            val = tone.val + tone.delta * tone.omega * grad
-        elif sector == 2:
-            val = Decimal(1)
-        elif sector == 3:
-            val = tone.val - tone.delta * tone.omega * grad
-        elif sector == 4:
-            val = Decimal(-1)
-        tone = yield tone._replace(val=val)
+class Trapezoid:
+
+    def __init__(self, nRise, nHigh, nFall, nLow):
+        nBins = sum((nRise, nHigh, nFall, nLow))
+        self.features = [
+            Decimal(2 * math.pi * i / nBins)
+            for i in (
+                0, nRise / 2, nRise / 2 + nHigh, nBins - nRise / 2 - nLow, nBins - nRise / 2, nBins
+            )
+        ]
+
+    def generate(self, tone=None):
+        grad = 1 / self.features[1]
+        if tone is None:
+            tone = yield None
+        while True:
+            prev = tone.theta - tone.delta * tone.omega
+            pos = Decimal(prev % Decimal(2 * math.pi))
+            sector = bisect.bisect_left(self.features, pos)
+            if sector in (0, 1, 5, 6):
+                val = tone.val + tone.delta * tone.omega * grad
+            elif sector == 2:
+                val = Decimal(1)
+            elif sector == 3:
+                val = tone.val - tone.delta * tone.omega * grad
+            elif sector == 4:
+                val = Decimal(-1)
+            tone = yield tone._replace(val=val)
+
+    def value(self):
+        pass
+
 
 class OSCTests(unittest.TestCase):
 
@@ -87,8 +95,14 @@ class OSCTests(unittest.TestCase):
             with self.subTest(n=n):
                 self.assertAlmostEqual(x, output.val)
 
+    def test_trapezoid_value(self):
+        wave = Trapezoid(2, 2, 2, 2)
+        zero = Decimal(0)
+        dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
+        self.assertEqual(-0.5, wave.value(-dt))
+
     def test_regular_trapezoid_800hz(self):
-        source = trapezoid(2, 2, 2, 2)
+        source = Trapezoid(2, 2, 2, 2).generate()
         source.send(None)
         zero = Decimal(0)
         dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
@@ -97,7 +111,8 @@ class OSCTests(unittest.TestCase):
         expected = [
             Decimal(i) for i in (
                 0, 0.5, 1, 1, 1, 1, 1, 0.5, 0, -0.5, -1, -1, -1, -1, -1, -0.5
-            ) * 4]
+            ) * 4
+        ]
 
         for n, x in enumerate(expected):
             if n == 0:
