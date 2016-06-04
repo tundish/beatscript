@@ -34,13 +34,8 @@ VEL_800_HZ = Decimal(800 * 2 * math.pi)  # Radians/ sec
 def sinewave(tone=None):
     if tone is None:
         tone = yield None
-    yield tone
     while True:
-        pos = Decimal.fma(tone.delta, tone.omega, tone.theta)
-        tone = yield tone._replace(
-            theta=pos,
-            val=Decimal(math.sin(pos))
-        )
+        tone = yield tone._replace(val=Decimal(math.sin(tone.theta)))
 
 def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
     nBins = sum((nRise, nHigh, nFall, nLow))
@@ -69,7 +64,7 @@ def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
 
 class OSCTests(unittest.TestCase):
 
-    def tost_sine_800hz(self):
+    def test_sine_800hz(self):
         source = sinewave()
         source.send(None)
         zero = Decimal(0)
@@ -83,10 +78,10 @@ class OSCTests(unittest.TestCase):
 
         for n, x in enumerate(expected):
             if n == 0:
-                output = source.send(Tone(zero, dt, VEL_800_HZ, zero))
+                output = source.send(Tone(zero, dt, VEL_800_HZ, expected[-1]))
             else:
                 output = source.send(
-                    Tone(output.theta + dt * VEL_800_HZ, dt, VEL_800_HZ, output.val)
+                    Tone(n * (dt * VEL_800_HZ), dt, VEL_800_HZ, output.val)
                 )
 
             with self.subTest(n=n):
@@ -113,5 +108,4 @@ class OSCTests(unittest.TestCase):
                 )
 
             with self.subTest(n=n):
-                print(n, x, output.theta, output.val) 
                 self.assertAlmostEqual(x, output.val)
