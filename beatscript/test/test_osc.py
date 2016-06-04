@@ -57,7 +57,6 @@ def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
         prev = tone.theta - tone.delta * tone.omega
         pos = Decimal(prev % Decimal(2 * math.pi))
         sector = bisect.bisect_left(features, pos)
-        print(sector)
         if sector in (0, 1, 5, 6):
             val = tone.val + tone.delta * tone.omega * grad
         elif sector == 2:
