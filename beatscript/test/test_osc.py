@@ -18,6 +18,7 @@
 
 """
 .. _maclaurin: http://voorloopnul.com/blog/approximating-the-sine-function-with-maclaurin-series-using-python/
+.. _wave generation: https://zach.se/generate-audio-with-python/
 """
 import bisect
 from collections import namedtuple
