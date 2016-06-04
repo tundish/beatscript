@@ -110,7 +110,7 @@ class OSCTests(unittest.TestCase):
                 output = source.send(Tone(zero, dt, VEL_800_HZ, expected[-1]))
             else:
                 output = source.send(
-                    Tone(output.theta + dt * VEL_800_HZ, dt, VEL_800_HZ, output.val)
+                    Tone(n * (dt * VEL_800_HZ), dt, VEL_800_HZ, output.val)
                 )
 
             with self.subTest(n=n):
