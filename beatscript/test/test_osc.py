@@ -54,11 +54,11 @@ def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
     if tone is None:
         tone = yield None
     while True:
-        theta = tone.theta + tone.delta * tone.omega
-        theta = tone.theta
-        pos = Decimal(theta % Decimal(2 * math.pi))
+        prev = tone.theta - tone.delta * tone.omega
+        pos = Decimal(prev % Decimal(2 * math.pi))
         sector = bisect.bisect_left(features, pos)
-        if sector in (0, 1):
+        print(sector)
+        if sector in (0, 1, 5, 6):
             val = tone.val + tone.delta * tone.omega * grad
         elif sector == 2:
             val = Decimal(1)
@@ -66,15 +66,7 @@ def trapezoid(nRise, nHigh, nFall, nLow, tone=None):
             val = tone.val - tone.delta * tone.omega * grad
         elif sector == 4:
             val = Decimal(-1)
-        elif sector == 5:
-            val = tone.val + tone.delta * tone.omega * grad
-        else:
-            warnings.warn("Bad trapezoid sector")
-            val = tone.val
-        tone = yield tone._replace(
-            theta=theta,
-            val=val
-        )
+        tone = yield tone._replace(val=val)
 
 class OSCTests(unittest.TestCase):
 
@@ -99,7 +91,7 @@ class OSCTests(unittest.TestCase):
                 )
 
             with self.subTest(n=n):
-                self.assertAlmostEqual(x, output.val, places=2)
+                self.assertAlmostEqual(x, output.val)
 
     def test_regular_trapezoid_800hz(self):
         source = trapezoid(2, 2, 2, 2)
@@ -115,9 +107,7 @@ class OSCTests(unittest.TestCase):
 
         for n, x in enumerate(expected):
             if n == 0:
-                output = source.send(Tone(
-                    Decimal(-dt * VEL_800_HZ), dt, VEL_800_HZ, expected[-1]
-                ))
+                output = source.send(Tone(zero, dt, VEL_800_HZ, expected[-1]))
             else:
                 output = source.send(
                     Tone(output.theta + dt * VEL_800_HZ, dt, VEL_800_HZ, output.val)
@@ -125,4 +115,4 @@ class OSCTests(unittest.TestCase):
 
             with self.subTest(n=n):
                 print(n, x, output.theta, output.val) 
-                self.assertAlmostEqual(x, output.val, places=2)
+                self.assertAlmostEqual(x, output.val)
