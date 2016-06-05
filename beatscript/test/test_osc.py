@@ -103,7 +103,8 @@ class OSCTests(unittest.TestCase):
         self.assertAlmostEqual(Decimal(-0.5), wave.value(zero, -dt, VEL_800_HZ, zero))
 
     def test_regular_trapezoid_800hz(self):
-        source = Trapezoid(2, 2, 2, 2).generate()
+        wf = Trapezoid(2, 2, 2, 2)
+        source = wf.generate()
         source.send(None)
         zero = Decimal(0)
         dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
@@ -117,7 +118,11 @@ class OSCTests(unittest.TestCase):
 
         for n, x in enumerate(expected):
             if n == 0:
-                output = source.send(Tone(zero, dt, VEL_800_HZ, expected[-1]))
+                output = source.send(
+                    Tone(zero, dt, VEL_800_HZ, wf.value(
+                        zero, -dt, VEL_800_HZ, zero)
+                    )
+                )
             else:
                 output = source.send(
                     Tone(n * (dt * VEL_800_HZ), dt, VEL_800_HZ, output.val)
