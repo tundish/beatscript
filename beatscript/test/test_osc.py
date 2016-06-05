@@ -50,26 +50,26 @@ class Trapezoid:
         ]
 
     def generate(self, tone=None):
-        grad = 1 / self.features[1]
         if tone is None:
             tone = yield None
         while True:
-            prev = tone.theta - tone.delta * tone.omega
-            pos = Decimal(prev % Decimal(2 * math.pi))
-            sector = bisect.bisect_left(self.features, pos)
-            if sector in (0, 1, 5, 6):
-                val = tone.val + tone.delta * tone.omega * grad
-            elif sector == 2:
-                val = Decimal(1)
-            elif sector == 3:
-                val = tone.val - tone.delta * tone.omega * grad
-            elif sector == 4:
-                val = Decimal(-1)
+            val = self.value(**tone._asdict())
             tone = yield tone._replace(val=val)
 
-    def value(self):
-        pass
-
+    def value(self, theta, delta, omega, val):
+        grad = 1 / self.features[1]
+        prev = theta - delta * omega
+        pos = Decimal(prev % Decimal(2 * math.pi))
+        sector = bisect.bisect_left(self.features, pos)
+        if sector in (0, 1, 5, 6):
+            val = val + delta * omega * grad
+        elif sector == 2:
+            val = Decimal(1)
+        elif sector == 3:
+            val = val - delta * omega * grad
+        elif sector == 4:
+            val = Decimal(-1)
+        return val
 
 class OSCTests(unittest.TestCase):
 
@@ -100,7 +100,7 @@ class OSCTests(unittest.TestCase):
         wave = Trapezoid(2, 2, 2, 2)
         zero = Decimal(0)
         dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
-        self.assertEqual(-0.5, wave.value(-dt))
+        self.assertAlmostEqual(Decimal(-0.5), wave.value(zero, -dt, VEL_800_HZ, zero))
 
     def test_regular_trapezoid_800hz(self):
         source = Trapezoid(2, 2, 2, 2).generate()
