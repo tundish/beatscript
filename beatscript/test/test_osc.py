@@ -24,7 +24,7 @@ from decimal import Decimal
 import math
 import unittest
 
-from beatscript.osc import sinewave
+from beatscript.osc import Sinewave
 from beatscript.osc import Tone
 from beatscript.osc import Trapezoid
 
@@ -34,7 +34,8 @@ VEL_800_HZ = Decimal(800 * 2 * math.pi)  # Radians/ sec
 class OSCTests(unittest.TestCase):
 
     def test_sine_800hz(self):
-        source = sinewave()
+        wf = Sinewave()
+        source = wf.generate()
         source.send(None)
         zero = Decimal(0)
         dt = Decimal(2 * math.pi) / Decimal(16 * VEL_800_HZ)
@@ -47,7 +48,11 @@ class OSCTests(unittest.TestCase):
 
         for n, x in enumerate(expected):
             if n == 0:
-                output = source.send(Tone(zero, dt, VEL_800_HZ, expected[-1]))
+                output = source.send(
+                    Tone(zero, dt, VEL_800_HZ, wf.value(
+                        zero, -dt, VEL_800_HZ, zero)
+                    )
+                )
             else:
                 output = source.send(
                     Tone(n * (dt * VEL_800_HZ), dt, VEL_800_HZ, output.val)

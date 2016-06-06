@@ -27,11 +27,18 @@ import math
 Tone = namedtuple("Tone", ["theta", "delta", "omega", "val"])
 
 
-def sinewave(tone=None):
-    if tone is None:
-        tone = yield None
-    while True:
-        tone = yield tone._replace(val=Decimal(math.sin(tone.theta)))
+class Sinewave:
+
+    def generate(self, tone=None):
+        if tone is None:
+            tone = yield None
+        while True:
+            tone = yield tone._replace(
+                val = self.value(**tone._asdict())
+            )
+
+    def value(self, theta, delta, omega, val):
+        return Decimal(math.sin(theta))
 
 class Trapezoid:
 
@@ -40,7 +47,8 @@ class Trapezoid:
         self.features = [
             Decimal(2 * math.pi * i / nBins)
             for i in (
-                0, nRise / 2, nRise / 2 + nHigh, nBins - nRise / 2 - nLow, nBins - nRise / 2, nBins
+                0, nRise / 2, nRise / 2 + nHigh,
+                nBins - nRise / 2 - nLow, nBins - nRise / 2, nBins
             )
         ]
 
