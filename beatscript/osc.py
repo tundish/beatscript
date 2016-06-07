@@ -73,3 +73,44 @@ class Trapezoid:
         elif sector == 4:
             val = Decimal(-1)
         return val
+
+if __name__ == "__main__":
+    import struct
+    import wave
+ 
+    F_SAMPLE = 44.1e3 
+    N_SAMPLE = int(3 * F_SAMPLE)
+    AMPLITUDE = Decimal(32767.0)
+    VEL_800_HZ = Decimal(800 * 2 * math.pi)  # Radians/ sec
+
+    zero = Decimal(0)
+    dt = Decimal(1 / F_SAMPLE)
+    wf = Sinewave()
+    source = wf.generate()
+    source.send(None)
+
+    with wave.open("sine.wav", "w") as w:
+        w.setnframes(N_SAMPLE) 
+        w.setnchannels(2) 
+        w.setsampwidth(2) 
+        w.setframerate(F_SAMPLE) 
+        w.setcomptype("NONE", "not compressed")
+
+        for n in range(N_SAMPLE):
+            if n == 0:
+                output = source.send(
+                    Tone(zero, dt, VEL_800_HZ, wf.value(
+                        zero, -dt, VEL_800_HZ, zero)
+                    )
+                )
+            else:
+                output = source.send(
+                    Tone(n * (dt * VEL_800_HZ), dt, VEL_800_HZ, output.val)
+                )
+
+            w.writeframesraw(struct.pack(
+                "h", int(AMPLITUDE * output.val)
+            ))
+            w.writeframesraw(struct.pack(
+                "h", int(AMPLITUDE * output.val)
+            ))
